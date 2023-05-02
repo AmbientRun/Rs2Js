@@ -22,7 +22,7 @@ fn do_derive_rs_js_obj(input: TokenStream) -> TokenStream {
             let name = field.ident.as_ref().unwrap();
             let name_str = name.to_string();
             quote! {
-                res.unchecked_ref::<rsjs_obj::ObjectExt>().set(#name_str.into(), (&self.#name).into());
+                res.unchecked_ref::<rs2js::ObjectExt>().set(#name_str.into(), (&self.#name).into());
             }
         });
 
@@ -38,7 +38,7 @@ fn do_derive_rs_js_obj(input: TokenStream) -> TokenStream {
             let name = field.ident.as_ref().unwrap();
             let name_str = name.to_string();
             let cast = if field.ty.to_token_stream().to_string() == "String" {
-                quote! { let value: JsString = value.try_into()?; }
+                quote! { let value: js_sys::JsString = value.try_into()?; }
             } else {
                 quote! {}
             };
@@ -62,23 +62,27 @@ fn do_derive_rs_js_obj(input: TokenStream) -> TokenStream {
         let name = input.ident;
 
         quote! {
-            impl rsjs_obj::RsJsObj for #name {
-                fn to_js(&self) -> JsValue {
-                    let mut res = Object::new();
+            impl rs2js::Rs2JsObj for #name {
+                fn to_js(&self) -> wasm_bindgen::JsValue {
+                    use rs2js::ObjectExt;
+                    use wasm_bindgen::JsCast;
+                    let mut res = js_sys::Object::new();
                     #(#to_js)*
                     res.into()
                 }
 
-                fn from_js(js: JsValue) -> anyhow::Result<Self> {
+                fn from_js(js: wasm_bindgen::JsValue) -> anyhow::Result<Self> {
                     use anyhow::Context;
+                    use rs2js::ObjectExt;
+                    use wasm_bindgen::JsCast;
                     if !js.is_object() {
                         anyhow::bail!("JsValue is not an object");
                     }
                     #(#from_js_defs)*
-                    let entries = Object::entries(js.unchecked_ref());
+                    let entries = js_sys::Object::entries(js.unchecked_ref());
                     for pair in entries.iter() {
-                        let pair = pair.unchecked_into::<Array>();
-                        let key: JsString = pair.get(0).try_into()?;
+                        let pair = pair.unchecked_into::<js_sys::Array>();
+                        let key: js_sys::JsString = pair.get(0).try_into()?;
                         let value = pair.get(1);
                         #(#from_js)*
                     }
@@ -104,23 +108,25 @@ fn test_struct() {
     pretty_assertions::assert_eq!(
         output.to_string(),
         quote! {
-            impl rsjs_obj::RsJsObj for Test {
-                fn to_js(&self) -> JsValue {
-                    let mut res = Object::new();
-                    res.unchecked_ref::<rsjs_obj::ObjectExt>().set("my_string_field".into(), (&self.my_string_field).into());
+            impl rs2js::Rs2JsObj for Test {
+                fn to_js(&self) -> wasm_bindgen::JsValue {
+                    use rs2js::ObjectExt;
+                    let mut res = js_sys::Object::new();
+                    res.unchecked_ref::<rs2js::ObjectExt>().set("my_string_field".into(), (&self.my_string_field).into());
                     res.into()
                 }
 
-                fn from_js(js: JsValue) -> anyhow::Result<Self> {
+                fn from_js(js: wasm_bindgen::JsValue) -> anyhow::Result<Self> {
                     use anyhow::Context;
+                    use rs2js::ObjectExt;
                     if !js.is_object() {
                         anyhow::bail!("JsValue is not an object");
                     }
                     let mut my_string_field: Option<String> = None;
-                    let entries = Object::entries(js.unchecked_ref());
+                    let entries = js_sys::Object::entries(js.unchecked_ref());
                     for pair in entries.iter() {
-                        let pair = pair.unchecked_into::<Array>();
-                        let key: JsString = pair.get(0).try_into()?;
+                        let pair = pair.unchecked_into::<js_sys::Array>();
+                        let key: js_sys::JsString = pair.get(0).try_into()?;
                         let value = pair.get(1);
                         if key == "my_string_field" {
                             my_string_field = Some(value.into());

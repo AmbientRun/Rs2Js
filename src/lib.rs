@@ -2,7 +2,7 @@ use js_sys::JsString;
 pub use rs2js_macro::*;
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 
-pub trait RsJsObj {
+pub trait Rs2JsObj {
     fn to_js(&self) -> JsValue;
     fn from_js(js: JsValue) -> anyhow::Result<Self>
     where
