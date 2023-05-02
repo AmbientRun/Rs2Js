@@ -2,11 +2,13 @@
 name = "rs2js"
 version = "0.1.0"
 edition = "2021"
+description = "A macro to convert Rust structs to/from JsValues"
+license = "MIT or APACHE-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 wasm-bindgen = "0.2"
-rsjs_macro = { path = "macro" }
+rsjs_macro = { path = "macro", version = "0.1" }
 anyhow = "1.0"
 js-sys = "0.3"
