@@ -1,6 +1,6 @@
 [package]
 name = "rs2js_macro"
-version = "0.2.0"
+version = "0.2.2"
 edition = "2021"
 description = "A macro to convert Rust structs to/from JsValues"
 license = "MIT OR Apache-2.0"
