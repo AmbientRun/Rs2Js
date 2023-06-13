@@ -1,3 +1,6 @@
+pub use ::anyhow;
+pub use ::js_sys;
+pub use ::wasm_bindgen;
 use js_sys::JsString;
 pub use rs2js_macro::*;
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
