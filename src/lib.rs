@@ -1,5 +1,6 @@
 pub use ::anyhow;
 pub use ::js_sys;
+pub use ::serde_wasm_bindgen;
 pub use ::wasm_bindgen;
 use js_sys::JsString;
 pub use rs2js_macro::*;

@@ -1,8 +1,8 @@
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
-use syn::{Data, DataStruct, DeriveInput, Fields};
+use quote::quote;
+use syn::{Attribute, Data, DataStruct, DeriveInput, Fields};
 
-#[proc_macro_derive(Rs2Js)]
+#[proc_macro_derive(Rs2Js, attributes(raw))]
 pub fn derive_rs_js_obj(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     do_derive_rs_js_obj(input.into()).into()
 }
@@ -21,8 +21,18 @@ fn do_derive_rs_js_obj(input: TokenStream) -> TokenStream {
         let to_js = fields.named.iter().map(|field| {
             let name = field.ident.as_ref().unwrap();
             let name_str = name.to_string();
+            let to_js = if is_raw(&field.attrs) {
+                quote! {
+                    (&self.#name).into()
+                }
+            } else {
+                quote! {
+                    rs2js::serde_wasm_bindgen::to_value(&self.#name).unwrap()
+                }
+            };
+
             quote! {
-                res.unchecked_ref::<rs2js::ObjectExt>().set(#name_str.into(), (&self.#name).into());
+                res.unchecked_ref::<rs2js::ObjectExt>().set(#name_str.into(), #to_js);
             }
         });
 
@@ -37,15 +47,21 @@ fn do_derive_rs_js_obj(input: TokenStream) -> TokenStream {
         let from_js = fields.named.iter().map(|field| {
             let name = field.ident.as_ref().unwrap();
             let name_str = name.to_string();
-            let cast = if field.ty.to_token_stream().to_string() == "String" {
-                quote! { let value: rs2js::js_sys::JsString = value.try_into()?; }
+            let from_js = if is_raw(&field.attrs) {
+                quote! {
+                    value.into()
+                }
             } else {
-                quote! {}
+                quote! {
+                    match rs2js::serde_wasm_bindgen::from_value(value) {
+                        Ok(val) => val,
+                        Err(err) => rs2js::anyhow::bail!("Failed to deserialize value for field {}: {:?}", #name_str, err)
+                    }
+                }
             };
             quote! {
                 if key == #name_str {
-                    #cast
-                    #name = Some(value.into());
+                    #name = Some(#from_js);
                     continue;
                 }
             }
@@ -95,6 +111,15 @@ fn do_derive_rs_js_obj(input: TokenStream) -> TokenStream {
     } else {
         panic!("Not a struct with named fields");
     }
+}
+
+fn is_raw(attrs: &Vec<Attribute>) -> bool {
+    for attr in attrs {
+        if attr.path().is_ident("raw") {
+            return true;
+        }
+    }
+    false
 }
 
 #[test]
